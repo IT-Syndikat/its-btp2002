@@ -62,8 +62,7 @@ waitThread :: Thread a -> IO a
 
 createThread ma = do
     mv <- newEmptyMVar
-    tid <- forkIO $
-             putMVar mv =<< ((Right <$> ma) `catch` handler)
+    tid <- forkIO $ putMVar mv =<< ((Right <$> ma) `catch` handler)
     return $ Thread tid mv
   where
     handler se@(SomeException _) = return (Left se)
@@ -164,15 +163,15 @@ go r = error $ "Unmatched: " ++ show r
 bl c = case c of "0" -> False; "1" -> True
 
 barcode_EAN13 :: Word8 -> ByteString -> ByteString
-barcode_EAN13 sz num |    BS.length num `elem` [12, 13]
-                       && BS8.all isDigit num
-                       && sz <= 120 && sz > 0 =
-    BS.concat [ BS8.pack [ '\GS', 'h', chr (fromIntegral sz)
-                         , '\GS', 'H', '\2'
-                         , '\GS', 'k', 'C', chr (BS.length num)
-                         ]
-              , num
-              ]
+barcode_EAN13 sz num
+  | and [ BS.length num `elem` [12, 13]
+        , BS8.all isDigit num
+        , sz <= 120 && sz > 0 ]
+  = BS.concat
+     [ BS8.pack [ '\GS', 'h', chr (fromIntegral sz)
+                , '\GS', 'H', '\2'
+                , '\GS', 'k', 'C', chr (BS.length num)
+                ], num ]
 
 barcode_PDF417 :: ByteString -> ByteString
 barcode_PDF417 num | BS.length num > 0 && BS.length num < 255 =
@@ -212,8 +211,8 @@ reshape x ls = gogo $ concat ls
           (xs,ys) -> xs : gogo ys
 
 bitmap :: (Bool, Bool) -> PBM -> ByteString
-bitmap sc (PBM x' y' bm) = BS.concat [
-    BS8.pack [ '\GS', 'v', '0', chr m, chr xL, chr xH, chr yL, chr yH ], dat]
+bitmap sc (PBM x' y' bm) = BS.concat
+    [ BS8.pack [ '\GS', 'v', '0', chr m, chr xL, chr xH, chr yL, chr yH ], dat ]
   where
     m = case sc of
           (False, False) -> 0
